@@ -10,6 +10,7 @@ const session = require('express-session')
 const flash = require('express-flash')
 const MongoDbStore = require('connect-mongo')(session)
 const passport = require('passport')
+const Emitter = require('events')
 
 // Database connection
 const url = 'mongodb://localhost/pizza';
@@ -26,6 +27,12 @@ let mongoStore = new MongoDbStore({
                 mongooseConnection: connection,
                 collection: 'sessions'
             })
+
+// Event emitter 
+const eventEmitter = new Emitter()
+// key,value
+app.set('eventEmitter', eventEmitter)
+
 // Session config
 app.use(session({
     secret: process.env.COOKIE_SECRET,
@@ -37,7 +44,6 @@ app.use(session({
 
 // Passport config 
 const passportInit = require('./app/config/passport')
-// here passport pass whic h we define upper through require 
 passportInit(passport)
 app.use(passport.initialize())
 app.use(passport.session())
@@ -61,6 +67,27 @@ app.set('view engine', 'ejs')
 
 require('./routes/web')(app)
 
-app.listen(PORT , () => {
-    console.log(`Listening on port ${PORT}`)
+const server = app.listen(PORT , () => {
+            console.log(`Listening on port ${PORT}`)
+        })
+
+// Socket 
+
+const io = require('socket.io')(server)
+io.on('connection', (socket) => {
+      // Join  use private room for single service
+    //   call here define somewher by emit 
+    // here join is key  and orderid as getting data paas by emit command
+      socket.on('join', (orderId) => {
+        socket.join(orderId)
+      })
+})
+
+eventEmitter.on('orderUpdated', (data) => {
+    // key-orderupdated,value-data
+    io.to(`order_${data.id}`).emit('orderUpdated', data)
+})
+
+eventEmitter.on('orderPlaced', (data) => {
+    io.to('adminRoom').emit('orderPlaced', data)
 })
