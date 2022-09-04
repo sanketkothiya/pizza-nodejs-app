@@ -10,7 +10,8 @@ function authController() {
         login(req, res) {
             res.render('auth/login')
         },
-        postLogin(req, res, next) {
+        postLogin(req, res, next) 
+        {
             const { email, password }   = req.body
            // Validate request 
             if(!email || !password) {
